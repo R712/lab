@@ -1,5 +1,6 @@
 # map styling
 **Preview** https://r712.github.io/lab/map-style-full
+<img src="map-style-full-preview.png" style="max-width: 940px">
 
 ### 만들어진 이유와 과정
 구글맵 api 기반으로 호출해서 단편적으로 쓰일 때 보기좋은 레벨로 단순 육지/바다/국경선만 표시한 styling json이 필요했다.
