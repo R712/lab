@@ -1,5 +1,7 @@
 # map styling
+
 **Preview** https://r712.github.io/lab/map-style-full
+
 <img src="map-style-full-preview.png" style="max-width: 940px">
 
 ### 만들어진 이유와 과정
