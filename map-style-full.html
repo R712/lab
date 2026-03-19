@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Maps Style JSON</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #F2F2F2;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL ── */
+.panel {
+  width: 400px;
+  min-width: 400px;
+  background: #fff;
+  border-right: 1px solid #E8E8E8;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid #EAEAEA;
+}
+.panel-header h1 { font-size: 15px; font-weight: 600; color: #1A1A1A; letter-spacing: -0.3px; }
+.panel-header p  { font-size: 11.5px; color: #AAAAAA; margin-top: 4px; line-height: 1.5; }
+
+.palette-section { padding: 14px 24px 14px; border-bottom: 1px solid #EAEAEA; }
+.palette-section h2 { font-size: 10px; font-weight: 600; color: #BBBBBB; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px; }
+.palette-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.swatch {
+  display: flex; align-items: center; gap: 8px;
+  background: #F8F8F8; border-radius: 6px; padding: 6px 10px;
+}
+.swatch-dot { width: 22px; height: 22px; border-radius: 5px; border: 1px solid #E4E4E4; flex-shrink: 0; }
+.swatch-info { display: flex; flex-direction: column; gap: 1px; }
+.swatch-hex  { font-family: 'SF Mono','Consolas',monospace; font-size: 11px; color: #555; font-weight: 500; }
+.swatch-role { font-size: 10px; color: #AAAAAA; }
+
+.json-section { flex: 1; overflow-y: auto; padding: 14px 24px 0; }
+.json-section h2 { font-size: 10px; font-weight: 600; color: #BBBBBB; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px; }
+.json-box {
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 8px;
+  padding: 14px;
+  overflow: auto;
+  max-height: calc(100vh - 340px);
+}
+.json-box pre {
+  font-family: 'SF Mono','Consolas','Courier New',monospace;
+  font-size: 10.5px;
+  line-height: 1.7;
+  color: #555;
+  white-space: pre;
+}
+.k { color: #7C5CBF; }
+.s { color: #C0522B; }
+.v { color: #257A40; }
+
+.copy-row { padding: 14px 24px 20px; }
+.copy-btn {
+  width: 100%; padding: 10px;
+  background: #1A1A1A; color: #fff;
+  border: none; border-radius: 7px;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; letter-spacing: 0.2px;
+  transition: background .15s;
+}
+.copy-btn:hover { background: #444; }
+
+/* ── RIGHT PANEL ── */
+.right {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px 36px;
+}
+.map-unit { display: flex; flex-direction: column; gap: 7px; }
+.map-title { font-size: 11px; font-weight: 500; color: #AAAAAA; padding-left: 3px; letter-spacing: 0.2px; }
+
+.map-frame {
+  width: 360px; height: 264px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #EAEAEA;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);
+  position: relative;
+}
+.map-frame svg { display: block; }
+
+.map-header { display:flex; align-items:center; justify-content:space-between; padding-left:3px; }
+.dl-btns { display:flex; gap:5px; }
+.dl-btns button {
+  font-size:10px; font-weight:500; color:#AAAAAA;
+  background:none; border:0.5px solid #DDDDDD;
+  border-radius:4px; padding:3px 7px; cursor:pointer;
+  font-family:inherit; letter-spacing:0.2px;
+  transition:background .12s, color .12s;
+}
+.dl-btns button:hover { background:#F5F5F5; color:#555; }
+</style>
+</head>
+<body>
+
+<!-- LEFT: JSON Panel -->
+<div class="panel">
+  <div class="panel-header">
+    <h1>Google Maps Style JSON</h1>
+    <p>도로·POI 제거 / 국가명·국경·육지·바다만 표시<br>Google Maps API <code>styles</code> 파라미터에 바로 적용 가능</p>
+  </div>
+
+  <div class="palette-section">
+    <h2>Color Palette</h2>
+    <div class="palette-grid">
+      <div class="swatch"><div class="swatch-dot" style="background:#FAFAFA;"></div><div class="swatch-info"><span class="swatch-hex">#FAFAFA</span><span class="swatch-role">육지</span></div></div>
+      <div class="swatch"><div class="swatch-dot" style="background:#EAEAEA;"></div><div class="swatch-info"><span class="swatch-hex">#EAEAEA</span><span class="swatch-role">바다</span></div></div>
+      <div class="swatch"><div class="swatch-dot" style="background:#FFFFFF; border:1px solid #DDD;"></div><div class="swatch-info"><span class="swatch-hex">#FFFFFF</span><span class="swatch-role">국경선</span></div></div>
+      <div class="swatch"><div class="swatch-dot" style="background:#A9A9A9;"></div><div class="swatch-info"><span class="swatch-hex">#A9A9A9</span><span class="swatch-role">국가명·지명</span></div></div>
+    </div>
+  </div>
+
+  <div class="json-section">
+    <h2>Style JSON</h2>
+    <div class="json-box"><pre id="json-display"></pre></div>
+  </div>
+
+  <div class="copy-row">
+    <button class="copy-btn" onclick="copyJson()">JSON 복사하기</button>
+  </div>
+</div>
+
+<!-- RIGHT: Maps (column) -->
+<div class="right">
+  <div class="map-unit">
+    <div class="map-header">
+      <span class="map-title">동아시아 · 동남아시아</span>
+      <div class="dl-btns">
+        <button onclick="downloadSVG('map1','sea_asia')">SVG</button>
+        <button onclick="downloadPNG('map1','sea_asia')">PNG 2x</button>
+      </div>
+    </div>
+    <div class="map-frame"><svg id="map1" width="360" height="264"></svg></div>
+  </div>
+  <div class="map-unit">
+    <div class="map-header">
+      <span class="map-title">대한민국 주요 도시</span>
+      <div class="dl-btns">
+        <button onclick="downloadSVG('map2','korea_cities')">SVG</button>
+        <button onclick="downloadPNG('map2','korea_cities')">PNG 2x</button>
+      </div>
+    </div>
+    <div class="map-frame"><svg id="map2" width="360" height="264"></svg></div>
+  </div>
+  <div class="map-unit">
+    <div class="map-header">
+      <span class="map-title">서울특별시</span>
+      <div class="dl-btns">
+        <button onclick="downloadSVG('map3','seoul')">SVG</button>
+        <button onclick="downloadPNG('map3','seoul')">PNG 2x</button>
+      </div>
+    </div>
+    <div class="map-frame"><svg id="map3" width="360" height="264"></svg></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+/* ── Style JSON ── */
+const styleJson = [
+  {"elementType":"geometry","stylers":[{"color":"#FAFAFA"}]},
+  {"elementType":"labels","stylers":[{"visibility":"off"}]},
+  {"featureType":"administrative.country","elementType":"geometry.stroke","stylers":[{"color":"#FFFFFF"},{"visibility":"on"},{"weight":1.5}]},
+  {"featureType":"administrative.country","elementType":"labels.text.fill","stylers":[{"color":"#A9A9A9"},{"visibility":"on"}]},
+  {"featureType":"administrative.country","elementType":"labels.text.stroke","stylers":[{"color":"#FAFAFA"},{"visibility":"on"},{"weight":3}]},
+  {"featureType":"administrative.province","stylers":[{"visibility":"off"}]},
+  {"featureType":"administrative.locality","stylers":[{"visibility":"off"}]},
+  {"featureType":"administrative.neighborhood","stylers":[{"visibility":"off"}]},
+  {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#FAFAFA"}]},
+  {"featureType":"landscape.natural","elementType":"geometry","stylers":[{"color":"#FAFAFA"}]},
+  {"featureType":"poi","stylers":[{"visibility":"off"}]},
+  {"featureType":"road","stylers":[{"visibility":"off"}]},
+  {"featureType":"road.highway","stylers":[{"visibility":"off"}]},
+  {"featureType":"road.arterial","stylers":[{"visibility":"off"}]},
+  {"featureType":"road.local","stylers":[{"visibility":"off"}]},
+  {"featureType":"transit","stylers":[{"visibility":"off"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#EAEAEA"}]},
+  {"featureType":"water","elementType":"labels","stylers":[{"visibility":"off"}]}
+];
+
+/* ── JSON highlight ── */
+function highlight(json) {
+  return JSON.stringify(json, null, 2)
+    .replace(/("[\w.]*")\s*:/g, '<span class="k">$1</span>:')
+    .replace(/:\s*(".*?")/g, ': <span class="s">$1</span>')
+    .replace(/:\s*(true|false|null|-?\d+\.?\d*)/g, ': <span class="v">$1</span>');
+}
+document.getElementById('json-display').innerHTML = highlight(styleJson);
+
+function copyJson() {
+  navigator.clipboard.writeText(JSON.stringify(styleJson, null, 2));
+  const btn = document.querySelector('.copy-btn');
+  btn.textContent = '복사 완료 ✓';
+  setTimeout(() => btn.textContent = 'JSON 복사하기', 2000);
+}
+
+/* ── Map helpers ── */
+const KF = "'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
+const C = { land:'#FAFAFA', sea:'#EAEAEA', border:'#FFFFFF', label:'#A9A9A9', halo:'#FAFAFA', dot:'#C8C8C8' };
+
+function label(g, x, y, text, fs, fw, anchor) {
+  const ta = anchor || 'middle';
+  g.append('text')
+    .attr('x',x).attr('y',y).attr('text-anchor',ta).attr('dominant-baseline','middle')
+    .attr('font-family',KF).attr('font-size',fs).attr('font-weight',fw||'400')
+    .attr('fill',C.halo).attr('stroke',C.halo).attr('stroke-width','3').attr('paint-order','stroke')
+    .text(text);
+  g.append('text')
+    .attr('x',x).attr('y',y).attr('text-anchor',ta).attr('dominant-baseline','middle')
+    .attr('font-family',KF).attr('font-size',fs).attr('font-weight',fw||'400')
+    .attr('fill',C.label)
+    .text(text);
+}
+
+function inBounds(x,y,W,H,pad) { const p=pad||4; return x>p && x<W-p && y>p && y<H-p; }
+
+/* ── Map 1: East Asia + SEA ── */
+function drawMap1(land, borders) {
+  const svg = d3.select('#map1');
+  const W=360, H=264;
+
+  // 동아시아+동남아: 경도95~150°E, 위도-8~50°N 커버
+  // scale=380 → 1°≈6.6px, 55°lon=363px (딱 맞음)
+  const proj = d3.geoMercator()
+    .center([122.5, 20.0])
+    .scale(380)
+    .translate([W / 2, H / 2 + 10]);
+  const path = d3.geoPath().projection(proj);
+
+  svg.append('rect').attr('width',W).attr('height',H).attr('fill',C.sea);
+  svg.append('path').datum(land).attr('d',path).attr('fill',C.land).attr('stroke','none');
+  svg.append('path').datum(borders).attr('d',path)
+    .attr('fill','none').attr('stroke',C.border).attr('stroke-width',0.8);
+
+  const countries1 = [
+    {n:'대한민국', c:[127.5,36.3]}, {n:'북한', c:[126.8,40.0]},
+    {n:'일본', c:[136.5,36.5]}, {n:'중국', c:[107.0,35.5]},
+    {n:'몽골', c:[103.0,47.5]}, {n:'대만', c:[120.8,23.5]},
+    {n:'필리핀', c:[121.5,11.5]}, {n:'베트남', c:[106.3,16.5]},
+    {n:'태국', c:[101.0,15.0]}, {n:'미얀마', c:[96.5,20.0]},
+    {n:'라오스', c:[103.5,18.5]}, {n:'캄보디아', c:[104.9,12.6]},
+    {n:'말레이시아', c:[109.5,3.8]}, {n:'인도네시아', c:[118.0,-3.5]},
+    {n:'싱가포르', c:[104.0,1.35]}, {n:'브루나이', c:[114.8,4.5]},
+    {n:'동티모르', c:[126.0,-8.8]}, {n:'방글라데시', c:[90.0,24.0]},
+    {n:'인도', c:[80.0,22.0]}, {n:'파키스탄', c:[69.0,30.0]},
+    {n:'러시아', c:[118.0,61.0]}, {n:'카자흐스탄', c:[66.0,48.0]},
+  ];
+
+  const g1 = svg.append('g');
+  countries1.forEach(d => {
+    const pt = proj(d.c); if (!pt) return;
+    const [x,y]=pt; if (!inBounds(x,y,W,H,2)) return;
+    label(g1,x,y,d.n,'8px','400');
+  });
+
+  drawClustersSEA(svg, proj, W, H);
+
+  drawSpecialPins(svg, proj, W, H, [
+    { lon: 139.69, lat: 35.69, num: '1' },
+    { lon: 126.98, lat: 37.57, num: '2' },
+    { lon: 100.50, lat: 13.75, num: '3' },
+  ]);
+}
+
+/* ── Map 2: South Korea only ── */
+function drawMap2(land, borders) {
+  const svg = d3.select('#map2');
+  const W=360, H=264;
+
+  // scale=2000: 1°lat ≈ 43px near 36°N → 264px covers ~6.1° (제주~DMZ 전부 포함)
+  const proj = d3.geoMercator()
+    .center([127.7, 36.05])
+    .scale(2000)
+    .translate([W / 2 - 8, H / 2]);
+  const path = d3.geoPath().projection(proj);
+
+  svg.append('rect').attr('width',W).attr('height',H).attr('fill',C.sea);
+  svg.append('path').datum(land).attr('d',path).attr('fill',C.land).attr('stroke','none');
+  svg.append('path').datum(borders).attr('d',path)
+    .attr('fill','none').attr('stroke',C.border).attr('stroke-width',1.5);
+
+  /* country label */
+  const cg = svg.append('g');
+  label(cg, W/2, 20, '대한민국', '11px', '500');
+
+  /* cities — South Korea only */
+  const cities = [
+    {n:'서울',   c:[126.978,37.566], r:3.5, fs:'10px', fw:'500', ox:7,   oy:0  },
+    {n:'인천',   c:[126.520,37.456], r:2.5, fs:'9px',  fw:'400', ox:-6,  oy:-6 },
+    {n:'수원',   c:[127.009,37.264], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'춘천',   c:[127.730,37.880], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'강릉',   c:[128.876,37.751], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'원주',   c:[127.944,37.344], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'천안',   c:[127.147,36.806], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'청주',   c:[127.491,36.637], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'대전',   c:[127.384,36.350], r:2.5, fs:'9.5px',fw:'400', ox:7,   oy:0  },
+    {n:'전주',   c:[127.148,35.824], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'광주',   c:[126.852,35.160], r:2.5, fs:'9.5px',fw:'400', ox:-6,  oy:-6 },
+    {n:'목포',   c:[126.388,34.811], r:2,   fs:'8.5px',fw:'400', ox:-6,  oy:5  },
+    {n:'여수',   c:[127.660,34.760], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'순천',   c:[127.487,34.950], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'대구',   c:[128.601,35.871], r:2.5, fs:'9.5px',fw:'400', ox:7,   oy:0  },
+    {n:'포항',   c:[129.365,36.019], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'경주',   c:[129.211,35.843], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:5  },
+    {n:'울산',   c:[129.311,35.538], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+    {n:'창원',   c:[128.683,35.228], r:2,   fs:'8.5px',fw:'400', ox:-6,  oy:-6 },
+    {n:'부산',   c:[129.075,35.180], r:3.5, fs:'10px', fw:'500', ox:7,   oy:0  },
+    {n:'제주',   c:[126.531,33.499], r:2,   fs:'8.5px',fw:'400', ox:7,   oy:0  },
+  ];
+
+  const dg = svg.append('g');
+  cities.forEach(d => {
+    const pt=proj(d.c); if(!pt) return;
+    const [x,y]=pt; if(!inBounds(x,y,W,H,2)) return;
+
+    dg.append('circle')
+      .attr('cx',x).attr('cy',y).attr('r',d.r)
+      .attr('fill',C.dot).attr('stroke',C.border).attr('stroke-width',0.8);
+
+    const anchor = d.ox < 0 ? 'end' : 'start';
+    label(dg, x+d.ox, y+d.oy, d.n, d.fs, d.fw, anchor);
+  });
+
+  drawClusters(svg, proj, W, H);
+
+  drawSpecialPins(svg, proj, W, H, [
+    { lon: 126.978, lat: 37.566, num: '1' },
+    { lon: 129.075, lat: 35.180, num: '2' },
+    { lon: 126.531, lat: 33.499, num: '3' },
+  ]);
+}
+
+
+/* ── Cluster markers overlay ── */
+function drawClusters(svgSel, proj, W, H) {
+  const clusterFill = 'rgba(246,143,0,0.32)';
+  const clusterStroke = 'rgba(246,143,0,0.55)';
+  const dotFill = 'rgba(246,143,0,0.50)';
+
+  // numbered clusters: [lon, lat, label, radius]
+  const clusters = [
+    [126.97, 37.57, '34', 22],
+    [129.07, 35.18, '21', 20],
+    [128.60, 35.87, '18', 19],
+    [127.38, 36.35, '15', 18],
+    [126.85, 35.16, '12', 17],
+    [127.49, 36.64, '09', 16],
+    [127.15, 35.82, '07', 15],
+    [126.53, 33.50, '05', 14],
+    [129.31, 35.54, '11', 17],
+    [128.68, 35.23, '08', 15],
+  ];
+
+  // small dots: [lon, lat, r]
+  const dots = [
+    [127.73, 37.88, 5],
+    [128.88, 37.75, 4],
+    [127.94, 37.34, 5],
+    [127.14, 36.81, 4],
+    [129.37, 36.02, 5],
+    [127.66, 34.76, 4],
+    [126.39, 34.81, 5],
+    [126.52, 37.46, 4],
+    [127.01, 37.26, 4],
+    [129.21, 35.84, 5],
+  ];
+
+  const g = svgSel.append('g').attr('class','clusters');
+
+  // small dots first (below clusters)
+  dots.forEach(([lon, lat, r]) => {
+    const pt = proj([lon, lat]); if (!pt) return;
+    const [x, y] = pt;
+    if (x < 0 || x > W || y < 0 || y > H) return;
+    g.append('circle')
+      .attr('cx', x).attr('cy', y).attr('r', r)
+      .attr('fill', dotFill)
+      .attr('stroke', 'none');
+  });
+
+  // numbered cluster circles
+  clusters.forEach(([lon, lat, num, r]) => {
+    const pt = proj([lon, lat]); if (!pt) return;
+    const [x, y] = pt;
+    if (x < 0 || x > W || y < 0 || y > H) return;
+    g.append('circle')
+      .attr('cx', x).attr('cy', y).attr('r', r)
+      .attr('fill', clusterFill)
+      .attr('stroke', 'none');
+    g.append('text')
+      .attr('x', x).attr('y', y)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('font-family', "'Noto Sans KR','Apple SD Gothic Neo',sans-serif")
+      .attr('font-size', '10px')
+      .attr('font-weight', '600')
+      .attr('fill', '#FFFFFF')
+      .text(+num);
+  });
+}
+
+/* ── Cluster markers for SEA map ── */
+function drawClustersSEA(svgSel, proj, W, H) {
+  const clusterFill = 'rgba(246,143,0,0.32)';
+  const clusterStroke = 'rgba(246,143,0,0.55)';
+  const dotFill = 'rgba(246,143,0,0.50)';
+
+  const clusters = [
+    [116.0, 31.0, '58', 22],
+    [104.0, 13.0, '34', 20],
+    [100.5, 13.8, '27', 19],
+    [106.7, 10.8, '23', 18],
+    [121.0, 14.6, '19', 18],
+    [106.5, -6.2, '15', 17],
+    [139.7, 35.7, '31', 20],
+    [127.5, 36.5, '44', 21],
+    [103.8, 1.35, '12', 16],
+    [96.1, 16.9, '08', 15],
+  ];
+
+  const dots = [
+    [118.0, 24.0, 5],
+    [110.5, 4.0, 4],
+    [115.0, -8.0, 5],
+    [125.0, 8.0, 4],
+    [108.2, 16.1, 5],
+    [113.5, 22.3, 4],
+    [129.9, 31.6, 5],
+    [130.5, 33.6, 4],
+    [114.2, 22.3, 4],
+  ];
+
+  const g = svgSel.append('g').attr('class','clusters-sea');
+
+  dots.forEach(([lon, lat, r]) => {
+    const pt = proj([lon, lat]); if (!pt) return;
+    const [x, y] = pt;
+    if (x < 0 || x > W || y < 0 || y > H) return;
+    g.append('circle')
+      .attr('cx', x).attr('cy', y).attr('r', r)
+      .attr('fill', dotFill)
+      .attr('stroke', 'none');
+  });
+
+  clusters.forEach(([lon, lat, num, r]) => {
+    const pt = proj([lon, lat]); if (!pt) return;
+    const [x, y] = pt;
+    if (x < 0 || x > W || y < 0 || y > H) return;
+    g.append('circle')
+      .attr('cx', x).attr('cy', y).attr('r', r)
+      .attr('fill', clusterFill)
+      .attr('stroke', 'none');
+    g.append('text')
+      .attr('x', x).attr('y', y)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('font-family', "'Noto Sans KR','Apple SD Gothic Neo',sans-serif")
+      .attr('font-size', '10px')
+      .attr('font-weight', '600')
+      .attr('fill', '#FFFFFF')
+      .text(+num);
+  });
+}
+
+/* ── Special pin markers ── */
+function drawSpecialPins(svgSel, proj, W, H, pins) {
+  // pins: [{lon, lat, num}]
+  const pinColor = '#F68F00';
+  const pinR = 14;
+  const triH = 9; // triangle height below circle
+
+  const g = svgSel.append('g').attr('class', 'special-pins');
+
+  pins.forEach(({ lon, lat, num }) => {
+    const pt = proj([lon, lat]); if (!pt) return;
+    const [cx, cy] = pt;
+    if (cx < pinR || cx > W - pinR || cy < pinR || cy > H - pinR + triH) return;
+
+    // shadow circle (subtle depth)
+    g.append('ellipse')
+      .attr('cx', cx).attr('cy', cy + pinR + triH + 1)
+      .attr('rx', 5).attr('ry', 2)
+      .attr('fill', 'rgba(0,0,0,0.12)');
+
+    // triangle pin below circle
+    const tx1 = cx - 6, ty1 = cy + pinR - 2;
+    const tx2 = cx + 6, ty2 = cy + pinR - 2;
+    const tx3 = cx,     ty3 = cy + pinR + triH;
+    g.append('polygon')
+      .attr('points', `${tx1},${ty1} ${tx2},${ty2} ${tx3},${ty3}`)
+      .attr('fill', pinColor);
+
+    // main circle
+    g.append('circle')
+      .attr('cx', cx).attr('cy', cy)
+      .attr('r', pinR)
+      .attr('fill', pinColor);
+
+    // white ring inside
+    g.append('circle')
+      .attr('cx', cx).attr('cy', cy)
+      .attr('r', pinR - 3)
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.35)')
+      .attr('stroke-width', 1);
+
+    // number
+    g.append('text')
+      .attr('x', cx).attr('y', cy)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('font-family', "'Noto Sans KR','Apple SD Gothic Neo',sans-serif")
+      .attr('font-size', '11px')
+      .attr('font-weight', '700')
+      .attr('fill', '#FFFFFF')
+      .text(num);
+  });
+}
+
+/* ── Map 3: Seoul city level ── */
+async function drawMap3(land, borders) {
+  const svg = d3.select('#map3');
+  const W = 360, H = 264;
+  const SEA = '#EAEAEA';
+
+  const proj = d3.geoMercator()
+    .center([126.978, 37.556])
+    .scale(38000)
+    .translate([W / 2, H / 2]);
+  const path = d3.geoPath().projection(proj);
+
+  svg.append('rect').attr('width', W).attr('height', H).attr('fill', SEA);
+  svg.append('path').datum(land).attr('d', path).attr('fill', C.land).attr('stroke', 'none');
+
+  // ── Seoul district GeoJSON (inline, 25 gu centroids used for fill regions)
+  // Load from jsdelivr — reliable CDN allowed in sandbox
+  const TOPO_URL = 'https://cdn.jsdelivr.net/gh/southkorea/seoul-maps@master/kostat/2013/json/seoul_municipalities_topo_simple.json';
+  let seoulLoaded = false;
+  try {
+    const seoulTopo = await d3.json(TOPO_URL);
+    const obj = Object.values(seoulTopo.objects)[0];
+    const seoulGeo  = topojson.feature(seoulTopo, obj);
+    const innerMesh = topojson.mesh(seoulTopo, obj, (a,b) => a !== b);
+    const outerMesh = topojson.mesh(seoulTopo, obj, (a,b) => a === b);
+
+    svg.append('g').selectAll('path')
+      .data(seoulGeo.features).join('path')
+      .attr('d', path).attr('fill', C.land).attr('stroke', 'none');
+
+    // district inner borders — sea color
+    svg.append('path').datum(innerMesh).attr('d', path)
+      .attr('fill', 'none').attr('stroke', SEA).attr('stroke-width', 1.2);
+
+    // Seoul outer boundary — slightly darker for contrast
+    svg.append('path').datum(outerMesh).attr('d', path)
+      .attr('fill', 'none').attr('stroke', '#D4D4D4').attr('stroke-width', 1.8);
+
+    seoulLoaded = true;
+  } catch(e) {
+    console.warn('Seoul topo CDN failed:', e);
+  }
+
+  // Fallback: if topo didn't load, draw country borders only
+  if (!seoulLoaded) {
+    svg.append('path').datum(borders).attr('d', path)
+      .attr('fill', 'none').attr('stroke', SEA).attr('stroke-width', 1.5);
+  }
+
+  // Han River (approximate polygon, sea color)
+  const hanRiver = { type:'Feature', geometry:{ type:'Polygon', coordinates:[[
+    [126.795,37.540],[126.810,37.535],[126.824,37.530],[126.836,37.528],
+    [126.848,37.525],[126.860,37.522],[126.872,37.520],[126.884,37.519],
+    [126.896,37.518],[126.908,37.517],[126.920,37.517],[126.932,37.516],
+    [126.944,37.515],[126.956,37.515],[126.968,37.515],[126.980,37.515],
+    [126.992,37.516],[127.004,37.517],[127.016,37.518],[127.028,37.519],
+    [127.040,37.520],[127.052,37.522],[127.064,37.525],[127.075,37.529],
+    [127.085,37.534],[127.094,37.540],[127.101,37.546],[127.107,37.551],
+    [127.113,37.553],[127.120,37.554],[127.128,37.552],[127.137,37.549],
+    [127.147,37.545],[127.157,37.542],[127.165,37.540],
+    [127.165,37.528],[127.155,37.531],[127.144,37.534],[127.132,37.537],
+    [127.119,37.539],[127.107,37.539],[127.097,37.536],[127.086,37.529],
+    [127.076,37.522],[127.064,37.515],[127.051,37.511],[127.038,37.509],
+    [127.026,37.508],[127.013,37.507],[127.001,37.506],[126.989,37.506],
+    [126.977,37.506],[126.965,37.506],[126.953,37.507],[126.941,37.508],
+    [126.929,37.509],[126.917,37.510],[126.905,37.512],[126.893,37.514],
+    [126.881,37.516],[126.869,37.519],[126.857,37.521],[126.846,37.524],
+    [126.836,37.528],[126.825,37.532],[126.816,37.537],[126.808,37.540],
+    [126.800,37.541],[126.795,37.540]
+  ]]}};
+
+  svg.append('path').datum(hanRiver).attr('d', path)
+    .attr('fill', SEA).attr('stroke', 'none');
+
+  // Neighboring city/province labels (outside Seoul boundary)
+  const neighbors = [
+    { n: '인천광역시',  c: [126.705, 37.456] },
+    { n: '경기 고양시', c: [126.833, 37.690] },
+    { n: '경기 의정부시', c: [127.095, 37.738] },
+    { n: '경기 남양주시', c: [127.220, 37.634] },
+    { n: '경기 하남시', c: [127.215, 37.539] },
+    { n: '경기 성남시', c: [127.135, 37.440] },
+    { n: '경기 과천시', c: [126.987, 37.430] },
+    { n: '경기 광명시', c: [126.856, 37.440] },
+    { n: '경기 부천시', c: [126.782, 37.510] },
+    { n: '경기 김포시', c: [126.705, 37.570] },
+  ];
+
+  const ng = svg.append('g');
+  neighbors.forEach(d => {
+    const pt = proj(d.c); if (!pt) return;
+    const [x, y] = pt;
+    if (!inBounds(x, y, W, H, 2)) return;
+    label(ng, x, y, d.n, '7.5px', '400');
+  });
+
+  // District labels
+  const districts = [
+    { n:'종로구',   c:[126.978,37.594] }, { n:'중구',     c:[126.997,37.565] },
+    { n:'용산구',   c:[126.990,37.533] }, { n:'성동구',   c:[127.041,37.563] },
+    { n:'광진구',   c:[127.085,37.548] }, { n:'동대문구', c:[127.040,37.582] },
+    { n:'중랑구',   c:[127.094,37.601] }, { n:'성북구',   c:[127.016,37.614] },
+    { n:'강북구',   c:[127.011,37.642] }, { n:'도봉구',   c:[127.047,37.671] },
+    { n:'노원구',   c:[127.073,37.652] }, { n:'은평구',   c:[126.928,37.622] },
+    { n:'서대문구', c:[126.936,37.578] }, { n:'마포구',   c:[126.903,37.557] },
+    { n:'양천구',   c:[126.856,37.517] }, { n:'강서구',   c:[126.822,37.551] },
+    { n:'구로구',   c:[126.855,37.495] }, { n:'금천구',   c:[126.900,37.457] },
+    { n:'영등포구', c:[126.896,37.527] }, { n:'동작구',   c:[126.940,37.497] },
+    { n:'관악구',   c:[126.951,37.476] }, { n:'서초구',   c:[127.033,37.484] },
+    { n:'강남구',   c:[127.049,37.518] }, { n:'송파구',   c:[127.107,37.514] },
+    { n:'강동구',   c:[127.134,37.549] },
+  ];
+
+  const dg = svg.append('g');
+  districts.forEach(d => {
+    const pt = proj(d.c); if (!pt) return;
+    const [x, y] = pt; if (!inBounds(x, y, W, H, 4)) return;
+    label(dg, x, y, d.n, '8px', '400');
+  });
+
+  // Han River label
+  const hrPt = proj([126.960, 37.512]);
+  if (hrPt && inBounds(hrPt[0], hrPt[1], W, H, 4)) {
+    dg.append('text')
+      .attr('x', hrPt[0]).attr('y', hrPt[1])
+      .attr('text-anchor','middle').attr('dominant-baseline','middle')
+      .attr('font-family', KF).attr('font-size','9px').attr('font-weight','400')
+      .attr('fill','#BEBEBE').attr('letter-spacing','3')
+      .text('한강');
+  }
+
+  // Special pins: 광화문, 강남역, 여의도
+  drawSpecialPins(svg, proj, W, H, [
+    { lon:126.977, lat:37.576, num:'1' },
+    { lon:127.028, lat:37.498, num:'2' },
+    { lon:126.924, lat:37.526, num:'3' },
+  ]);
+
+  // Cluster markers
+  const CF = 'rgba(246,143,0,0.32)', DF = 'rgba(246,143,0,0.50)';
+  const clusters3 = [
+    [126.854,37.495,'8', 16],[127.105,37.514,'22',19],
+    [127.073,37.651,'11',17],[126.822,37.550,'14',17],
+    [126.945,37.476,'17',18],[127.040,37.582,'9', 15],
+  ];
+  const dots3 = [
+    [126.928,37.620,5],[127.093,37.599,4],[126.988,37.532,4],
+    [127.082,37.548,5],[126.900,37.456,4],[127.016,37.614,4],[126.936,37.577,5],
+  ];
+  const cg = svg.append('g');
+  dots3.forEach(([lon,lat,r]) => {
+    const pt=proj([lon,lat]); if(!pt) return;
+    const [x,y]=pt; if(x<0||x>W||y<0||y>H) return;
+    cg.append('circle').attr('cx',x).attr('cy',y).attr('r',r).attr('fill',DF).attr('stroke','none');
+  });
+  clusters3.forEach(([lon,lat,num,r]) => {
+    const pt=proj([lon,lat]); if(!pt) return;
+    const [x,y]=pt; if(x<0||x>W||y<0||y>H) return;
+    cg.append('circle').attr('cx',x).attr('cy',y).attr('r',r).attr('fill',CF).attr('stroke','none');
+    cg.append('text').attr('x',x).attr('y',y)
+      .attr('text-anchor','middle').attr('dominant-baseline','middle')
+      .attr('font-family',KF).attr('font-size','10px').attr('font-weight','600')
+      .attr('fill','#FFFFFF').text(+num);
+  });
+}
+
+/* ── Download helpers ── */
+function downloadSVG(svgId, name) {
+  const svgEl = document.getElementById(svgId);
+  const serializer = new XMLSerializer();
+  let src = serializer.serializeToString(svgEl);
+  if (!src.includes('xmlns=')) src = src.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  const blob = new Blob([src], { type:'image/svg+xml;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.svg';
+  a.click();
+}
+
+function downloadPNG(svgId, name) {
+  const svgEl = document.getElementById(svgId);
+  const W = +svgEl.getAttribute('width');
+  const H = +svgEl.getAttribute('height');
+  const scale = 2;
+  const serializer = new XMLSerializer();
+  let src = serializer.serializeToString(svgEl);
+  if (!src.includes('xmlns=')) src = src.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  const blob = new Blob([src], { type:'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale; canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = name + '@2x.png';
+    a.click();
+  };
+  img.src = url;
+}
+
+/* ── Load world data ── */
+async function init() {
+  const world = await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json');
+  const land    = topojson.feature(world, world.objects.land);
+  const borders = topojson.mesh(world, world.objects.countries, (a,b) => a!==b);
+  drawMap1(land, borders);
+  drawMap2(land, borders);
+  await drawMap3(land, borders);
+}
+
+init().catch(e => {
+  console.error(e);
+  ['map1','map2'].forEach(id => {
+    d3.select('#'+id).append('text')
+      .attr('x',180).attr('y',132).attr('text-anchor','middle')
+      .attr('font-size','12px').attr('fill','#AAA')
+      .text('지도를 불러오지 못했습니다.');
+  });
+});
+</script>
+</body>
+</html>
