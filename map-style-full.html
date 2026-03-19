@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Google Maps Style JSON for Nyam!</title>
+<title>Google Maps Style JSON</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -207,6 +207,23 @@ input[type=color] {
 .anim-paused .ring-ripple {
   animation-play-state: paused !important;
 }
+
+/* ── Cursor defaults ── */
+body, svg, svg text, svg path, svg rect, svg ellipse, svg polygon, svg circle,
+.panel, .panel-header, .palette-section, .ctrl-section, .json-section, .copy-row,
+.swatch, .swatch-dot, .swatch-info, .swatch-hex, .swatch-role,
+.color-row, .color-row-label, .color-rows,
+.map-unit, .map-frame, .map-title, .map-header,
+.toggle-label, .toggle-sub,
+h1, h2, p, pre, span, div, label:not(.toggle-wrap) {
+  cursor: default;
+}
+.toggle-wrap, .toggle-track,
+.dl-btns button, .copy-btn,
+input[type=color], input[type=checkbox] {
+  cursor: pointer;
+}
+a { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -219,12 +236,44 @@ input[type=color] {
   </div>
 
   <div class="palette-section">
-    <h2>Color Palette</h2>
-    <div class="palette-grid">
-      <div class="swatch"><div class="swatch-dot" style="background:#FAFAFA;"></div><div class="swatch-info"><span class="swatch-hex">#FAFAFA</span><span class="swatch-role">육지</span></div></div>
-      <div class="swatch"><div class="swatch-dot" style="background:#EAEAEA;"></div><div class="swatch-info"><span class="swatch-hex">#EAEAEA</span><span class="swatch-role">바다</span></div></div>
-      <div class="swatch"><div class="swatch-dot" style="background:#FFFFFF; border:1px solid #DDD;"></div><div class="swatch-info"><span class="swatch-hex">#FFFFFF</span><span class="swatch-role">국경선</span></div></div>
-      <div class="swatch"><div class="swatch-dot" style="background:#A9A9A9;"></div><div class="swatch-info"><span class="swatch-hex">#A9A9A9</span><span class="swatch-role">국가명·지명</span></div></div>
+    <h2>Map Colors</h2>
+    <div class="color-rows">
+      <div class="color-row">
+        <div class="color-row-label">
+          <span>육지</span><span>Land fill</span>
+        </div>
+        <div class="color-row-right">
+          <span class="color-hex" id="landHex">#FAFAFA</span>
+          <input type="color" id="landColor" value="#fafafa" oninput="updateMapColor('land',this.value)">
+        </div>
+      </div>
+      <div class="color-row">
+        <div class="color-row-label">
+          <span>바다</span><span>Water fill</span>
+        </div>
+        <div class="color-row-right">
+          <span class="color-hex" id="seaHex">#EAEAEA</span>
+          <input type="color" id="seaColor" value="#eaeaea" oninput="updateMapColor('sea',this.value)">
+        </div>
+      </div>
+      <div class="color-row">
+        <div class="color-row-label">
+          <span>국경선</span><span>Country border</span>
+        </div>
+        <div class="color-row-right">
+          <span class="color-hex" id="borderHex">#FFFFFF</span>
+          <input type="color" id="borderColor" value="#ffffff" oninput="updateMapColor('border',this.value)">
+        </div>
+      </div>
+      <div class="color-row">
+        <div class="color-row-label">
+          <span>국가명·지명</span><span>Place labels</span>
+        </div>
+        <div class="color-row-right">
+          <span class="color-hex" id="labelHex">#A9A9A9</span>
+          <input type="color" id="labelColor" value="#a9a9a9" oninput="updateMapColor('label',this.value)">
+        </div>
+      </div>
     </div>
   </div>
 
@@ -325,6 +374,97 @@ input[type=color] {
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js">
+
+/* ── Map color live update ── */
+const mapColorState = {
+  land: '#FAFAFA',
+  sea:  '#EAEAEA',
+  border: '#FFFFFF',
+  label: '#A9A9A9'
+};
+
+function updateMapColor(type, hex) {
+  mapColorState[type] = hex.toUpperCase();
+  const hexUpper = hex.toUpperCase();
+
+  const hexMap = { land:'landHex', sea:'seaHex', border:'borderHex', label:'labelHex' };
+  document.getElementById(hexMap[type]).textContent = hexUpper;
+
+  if (type === 'land') {
+    document.querySelectorAll('svg path[fill]').forEach(el => {
+      if (el.getAttribute('fill') === mapColorState.land || el.getAttribute('fill') === '#FAFAFA') return;
+    });
+    // Update all land paths across all svgs
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('path').forEach(el => {
+        const f = el.getAttribute('fill');
+        if (f && (f === '#FAFAFA' || f === mapColorState.land)) el.setAttribute('fill', hexUpper);
+      });
+      // also rect backgrounds set to land don't exist, skip
+    });
+    mapColorState.land = hexUpper;
+  }
+
+  if (type === 'sea') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      // background rect
+      svg.querySelectorAll('rect').forEach(el => {
+        el.setAttribute('fill', hexUpper);
+      });
+      // water paths (those with fill matching previous sea color)
+      svg.querySelectorAll('path').forEach(el => {
+        const f = el.getAttribute('fill');
+        if (f && (f === '#EAEAEA' || f === mapColorState.sea)) el.setAttribute('fill', hexUpper);
+      });
+      // district boundary strokes that match sea
+      svg.querySelectorAll('path[stroke]').forEach(el => {
+        const s = el.getAttribute('stroke');
+        if (s && (s === '#EAEAEA' || s === mapColorState.sea)) el.setAttribute('stroke', hexUpper);
+      });
+    });
+    mapColorState.sea = hexUpper;
+  }
+
+  if (type === 'border') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('path[stroke]').forEach(el => {
+        const s = el.getAttribute('stroke');
+        if (s && (s === '#FFFFFF' || s === mapColorState.border)) el.setAttribute('stroke', hexUpper);
+      });
+    });
+    mapColorState.border = hexUpper;
+  }
+
+  if (type === 'label') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('text').forEach(el => {
+        const f = el.getAttribute('fill');
+        const fw = el.getAttribute('font-weight');
+        const fs = el.getAttribute('font-size');
+        // country/city labels (400/500 weight, not white, not #1A1A1A place label)
+        if (f && (f === '#A9A9A9' || f === mapColorState.label) &&
+            fw !== '600' && fw !== '700') {
+          el.setAttribute('fill', hexUpper);
+        }
+        // halo strokes for labels
+        const stroke = el.getAttribute('stroke');
+        if (stroke && (stroke === '#FAFAFA' || stroke === mapColorState.land)) {
+          // keep halo as land color — don't change these
+        }
+      });
+    });
+    mapColorState.label = hexUpper;
+  }
+}
+
 /* ── Animation toggle ── */
 function toggleAnim(cb) {
   document.querySelector('.right').classList.toggle('anim-paused', !cb.checked);
@@ -391,6 +531,97 @@ function updateNumColor(hex) {
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js">
+
+/* ── Map color live update ── */
+const mapColorState = {
+  land: '#FAFAFA',
+  sea:  '#EAEAEA',
+  border: '#FFFFFF',
+  label: '#A9A9A9'
+};
+
+function updateMapColor(type, hex) {
+  mapColorState[type] = hex.toUpperCase();
+  const hexUpper = hex.toUpperCase();
+
+  const hexMap = { land:'landHex', sea:'seaHex', border:'borderHex', label:'labelHex' };
+  document.getElementById(hexMap[type]).textContent = hexUpper;
+
+  if (type === 'land') {
+    document.querySelectorAll('svg path[fill]').forEach(el => {
+      if (el.getAttribute('fill') === mapColorState.land || el.getAttribute('fill') === '#FAFAFA') return;
+    });
+    // Update all land paths across all svgs
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('path').forEach(el => {
+        const f = el.getAttribute('fill');
+        if (f && (f === '#FAFAFA' || f === mapColorState.land)) el.setAttribute('fill', hexUpper);
+      });
+      // also rect backgrounds set to land don't exist, skip
+    });
+    mapColorState.land = hexUpper;
+  }
+
+  if (type === 'sea') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      // background rect
+      svg.querySelectorAll('rect').forEach(el => {
+        el.setAttribute('fill', hexUpper);
+      });
+      // water paths (those with fill matching previous sea color)
+      svg.querySelectorAll('path').forEach(el => {
+        const f = el.getAttribute('fill');
+        if (f && (f === '#EAEAEA' || f === mapColorState.sea)) el.setAttribute('fill', hexUpper);
+      });
+      // district boundary strokes that match sea
+      svg.querySelectorAll('path[stroke]').forEach(el => {
+        const s = el.getAttribute('stroke');
+        if (s && (s === '#EAEAEA' || s === mapColorState.sea)) el.setAttribute('stroke', hexUpper);
+      });
+    });
+    mapColorState.sea = hexUpper;
+  }
+
+  if (type === 'border') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('path[stroke]').forEach(el => {
+        const s = el.getAttribute('stroke');
+        if (s && (s === '#FFFFFF' || s === mapColorState.border)) el.setAttribute('stroke', hexUpper);
+      });
+    });
+    mapColorState.border = hexUpper;
+  }
+
+  if (type === 'label') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('text').forEach(el => {
+        const f = el.getAttribute('fill');
+        const fw = el.getAttribute('font-weight');
+        const fs = el.getAttribute('font-size');
+        // country/city labels (400/500 weight, not white, not #1A1A1A place label)
+        if (f && (f === '#A9A9A9' || f === mapColorState.label) &&
+            fw !== '600' && fw !== '700') {
+          el.setAttribute('fill', hexUpper);
+        }
+        // halo strokes for labels
+        const stroke = el.getAttribute('stroke');
+        if (stroke && (stroke === '#FAFAFA' || stroke === mapColorState.land)) {
+          // keep halo as land color — don't change these
+        }
+      });
+    });
+    mapColorState.label = hexUpper;
+  }
+}
+
 /* ── Animation toggle ── */
 function toggleAnim(cb) {
   document.querySelector('.right').classList.toggle('anim-paused', !cb.checked);
@@ -561,6 +792,7 @@ function drawMap1(land, borders) {
     { lon: 126.98, lat: 37.57, num: '2' },
     { lon: 100.50, lat: 13.75, num: '3' },
   ]);
+  drawPin1Label(svg);
 }
 
 /* ── Map 2: South Korea only ── */
@@ -629,6 +861,7 @@ function drawMap2(land, borders) {
     { lon: 129.075, lat: 35.180, num: '2' },
     { lon: 126.531, lat: 33.499, num: '3' },
   ]);
+  drawPin1Label(svg);
 }
 
 
@@ -761,6 +994,36 @@ function drawClustersSEA(svgSel, proj, W, H) {
   });
 }
 
+/* ── Pin #1 place label — always drawn last (topmost z-order) ── */
+let pin1LabelCoord = null;
+
+function drawPin1Label(svgSel) {
+  if (!pin1LabelCoord) return;
+  const { cx, cy } = pin1LabelCoord;
+  const pinR = 14, triH = 9;
+  const labelY = cy + pinR + triH + 11;
+  // halo
+  svgSel.append('text')
+    .attr('x', cx).attr('y', labelY)
+    .attr('text-anchor','middle').attr('dominant-baseline','middle')
+    .attr('font-family',"'Noto Sans KR','Apple SD Gothic Neo',sans-serif")
+    .attr('font-size','10px').attr('font-weight','500')
+    .attr('fill','#FFFFFF').attr('stroke','#FFFFFF')
+    .attr('stroke-width','3').attr('paint-order','stroke')
+    .attr('class','pin1-place-label')
+    .text('1위. 일식당 하네');
+  // text
+  svgSel.append('text')
+    .attr('x', cx).attr('y', labelY)
+    .attr('text-anchor','middle').attr('dominant-baseline','middle')
+    .attr('font-family',"'Noto Sans KR','Apple SD Gothic Neo',sans-serif")
+    .attr('font-size','10px').attr('font-weight','500')
+    .attr('fill','#1A1A1A')
+    .attr('class','pin1-place-label')
+    .text('1위. 일식당 하네');
+  pin1LabelCoord = null; // reset for next map
+}
+
 /* ── Special pin markers ── */
 function drawSpecialPins(svgSel, proj, W, H, pins) {
   // pins: [{lon, lat, num}]
@@ -823,6 +1086,11 @@ function drawSpecialPins(svgSel, proj, W, H, pins) {
       .attr('font-family',"'Noto Sans KR','Apple SD Gothic Neo',sans-serif")
       .attr('font-size','11px').attr('font-weight','700')
       .attr('fill','#FFFFFF').text(num);
+
+    // place name below pin #1 — stored for last-draw (topmost layer)
+    if (num === '1') {
+      pin1LabelCoord = { cx, cy };
+    }
   });
 }
 
@@ -957,13 +1225,6 @@ async function drawMap3(land, borders) {
       .text('한강');
   }
 
-  // Special pins: 광화문, 강남역, 여의도
-  drawSpecialPins(svg, proj, W, H, [
-    { lon:126.977, lat:37.576, num:'1' },
-    { lon:127.028, lat:37.498, num:'2' },
-    { lon:126.924, lat:37.526, num:'3' },
-  ]);
-
   // Cluster markers
   const CF = 'rgba(246,143,0,0.32)', DF = 'rgba(246,143,0,0.50)';
   const clusters3 = [
@@ -993,6 +1254,14 @@ async function drawMap3(land, borders) {
       .attr('font-family',KF).attr('font-size','10px').attr('font-weight','600')
       .attr('fill','#FFFFFF').text(+num);
   });
+
+  // Special pins drawn LAST so they sit above all clusters
+  drawSpecialPins(svg, proj, W, H, [
+    { lon:126.977, lat:37.576, num:'1' },
+    { lon:127.028, lat:37.498, num:'2' },
+    { lon:126.924, lat:37.526, num:'3' },
+  ]);
+  drawPin1Label(svg);
 }
 
 /* ── Download helpers ── */
@@ -1053,6 +1322,97 @@ init().catch(e => {
       .text('지도를 불러오지 못했습니다.');
   });
 });
+
+
+/* ── Map color live update ── */
+const mapColorState = {
+  land: '#FAFAFA',
+  sea:  '#EAEAEA',
+  border: '#FFFFFF',
+  label: '#A9A9A9'
+};
+
+function updateMapColor(type, hex) {
+  mapColorState[type] = hex.toUpperCase();
+  const hexUpper = hex.toUpperCase();
+
+  const hexMap = { land:'landHex', sea:'seaHex', border:'borderHex', label:'labelHex' };
+  document.getElementById(hexMap[type]).textContent = hexUpper;
+
+  if (type === 'land') {
+    document.querySelectorAll('svg path[fill]').forEach(el => {
+      if (el.getAttribute('fill') === mapColorState.land || el.getAttribute('fill') === '#FAFAFA') return;
+    });
+    // Update all land paths across all svgs
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('path').forEach(el => {
+        const f = el.getAttribute('fill');
+        if (f && (f === '#FAFAFA' || f === mapColorState.land)) el.setAttribute('fill', hexUpper);
+      });
+      // also rect backgrounds set to land don't exist, skip
+    });
+    mapColorState.land = hexUpper;
+  }
+
+  if (type === 'sea') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      // background rect
+      svg.querySelectorAll('rect').forEach(el => {
+        el.setAttribute('fill', hexUpper);
+      });
+      // water paths (those with fill matching previous sea color)
+      svg.querySelectorAll('path').forEach(el => {
+        const f = el.getAttribute('fill');
+        if (f && (f === '#EAEAEA' || f === mapColorState.sea)) el.setAttribute('fill', hexUpper);
+      });
+      // district boundary strokes that match sea
+      svg.querySelectorAll('path[stroke]').forEach(el => {
+        const s = el.getAttribute('stroke');
+        if (s && (s === '#EAEAEA' || s === mapColorState.sea)) el.setAttribute('stroke', hexUpper);
+      });
+    });
+    mapColorState.sea = hexUpper;
+  }
+
+  if (type === 'border') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('path[stroke]').forEach(el => {
+        const s = el.getAttribute('stroke');
+        if (s && (s === '#FFFFFF' || s === mapColorState.border)) el.setAttribute('stroke', hexUpper);
+      });
+    });
+    mapColorState.border = hexUpper;
+  }
+
+  if (type === 'label') {
+    ['map1','map2','map3'].forEach(id => {
+      const svg = document.getElementById(id);
+      if (!svg) return;
+      svg.querySelectorAll('text').forEach(el => {
+        const f = el.getAttribute('fill');
+        const fw = el.getAttribute('font-weight');
+        const fs = el.getAttribute('font-size');
+        // country/city labels (400/500 weight, not white, not #1A1A1A place label)
+        if (f && (f === '#A9A9A9' || f === mapColorState.label) &&
+            fw !== '600' && fw !== '700') {
+          el.setAttribute('fill', hexUpper);
+        }
+        // halo strokes for labels
+        const stroke = el.getAttribute('stroke');
+        if (stroke && (stroke === '#FAFAFA' || stroke === mapColorState.land)) {
+          // keep halo as land color — don't change these
+        }
+      });
+    });
+    mapColorState.label = hexUpper;
+  }
+}
 
 /* ── Animation toggle ── */
 function toggleAnim(cb) {
